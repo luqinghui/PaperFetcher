@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using HtmlAgilityPack;
+using System.Text.RegularExpressions;
 
 namespace PaperFetcher
 {
@@ -88,13 +89,27 @@ namespace PaperFetcher
 
         private void SearchResultTreeView_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
         {
-            //获取引用文献
+            //判断中英文
+            if(IsChinese(e.Node.Text))
+            {
+                //中文
+                //万方获取DOI
 
+                //baidu获取详细信息
 
-            //获取详细信息
-            string bing_url = GetPaperBingUrl(e.Node.Text);
+            }
+            else
+            {
+                //英文，用bing获取详细信息
+                string bing_url = GetPaperBingUrl(e.Node.Text);
 
-            GetPaperDetailByBing(bing_url, e.Node.Text);
+                GetPaperDetailByBing(bing_url, e.Node.Text);
+            }
+
+            //设置详细信息
+            
+
+            //填充参考文献
 
         }
 
@@ -132,7 +147,7 @@ namespace PaperFetcher
 
             if (title.Trim().ToUpper() != title_new.Trim().ToUpper())
             {
-                MessageBox.Show("文章内容不一致");
+                MessageBox.Show("文章标题不一致");
                 return;
             }
 
@@ -148,49 +163,83 @@ namespace PaperFetcher
             var nodes = doc.DocumentNode.SelectNodes("//*[@id=\"b_content\"]/ol[1]/li[3]/ul/li");
             foreach(var node in nodes)
             {
+                string label = node.SelectSingleNode("./div/span[1]/span[1]").InnerText;
+                label = Regex.Replace(label, @"\s", "");
 
+                switch(label)
+                {
+                    case "作者":
+                        {
+                            //author
+                            var author_nodes = node.SelectNodes("./div/span[2]/div/span/a");
+                            if (author_nodes != null)
+                            {
+                                paper.Authors = new List<string>();
+                                foreach (var a_node in author_nodes)
+                                    paper.Authors.Add(a_node.InnerText.Trim());
+                            }
+                        }
+                        break;
+
+                    case "摘要":
+                        {
+                            //abstrect
+                            var abstract_node = node.SelectSingleNode("./div/span[2]/div/span/span");
+                            if (abstract_node != null)
+                            {
+                                paper.Abstract = abstract_node.Attributes["title"].Value.ToString();
+                            }
+                        }
+                        break;
+
+                    case "发表日期":
+                        {
+                            //date
+                            var date_node = node.SelectSingleNode("./div/span[2]/div");
+                            if (date_node != null)
+                            {
+                                paper.PublishDate = date_node.InnerText.Trim();
+                            }
+                        }
+                        break;
+
+                    case "被引量":
+                        {
+                            //bing_cite
+                            var bingcite_node = node.SelectSingleNode("./div/span[2]/div");
+                            if (bingcite_node != null)
+                            {
+                                paper.BingCIte = Convert.ToInt32(bingcite_node.InnerText.Trim());
+                            }
+                        }
+                        break;
+
+                    case "DOI":
+                        {
+                            //DOI
+                            var doi_node = node.SelectSingleNode("./div/span[2]/div");
+                            if (doi_node != null)
+                            {
+                                paper.DOI = doi_node.InnerText.Trim();
+                            }
+                        }
+                        break;
+
+                    default:
+                        break;                     
+                }
             }
 
+            //获取参考文献
+        }
 
-
-
-
-            ////author
-            //var author_nodes = doc.DocumentNode.SelectNodes("//*[@id=\"b_content\"]/ol[1]/li[3]/ul/li[1]/div/span[2]/div/span/a");
-            //if(author_nodes != null)
-            //{
-            //    paper.Authors = new List<string>();
-            //    foreach (var node in author_nodes)
-            //        paper.Authors.Add(node.InnerText.Trim());
-            //}
-
-            ////abstrect
-            //var abstract_node = doc.DocumentNode.SelectSingleNode("//*[@id=\"dscexpitem_659051841_6\"]/span");
-            //if(abstract_node != null)
-            //{
-            //    paper.Abstract = abstract_node.Attributes["title"].Value.ToString();
-            //}
-
-            ////date
-            //var date_node = doc.DocumentNode.SelectSingleNode("//*[@id=\"b_content\"]/ol[1]/li[3]/ul/li[4]/div/span[2]/div");
-            //if (date_node != null)
-            //{
-            //    paper.PublishDate = date_node.InnerText.Trim();
-            //}
-
-            ////bing_cite
-            //var bingcite_node = doc.DocumentNode.SelectSingleNode("//*[@id=\"b_content\"]/ol[1]/li[3]/ul/li[9]/div/span[2]/div");
-            //if(bingcite_node != null)
-            //{
-            //    paper.BingCIte = Convert.ToInt32(bingcite_node.InnerText.Trim());
-            //}
-
-            ////DOI
-            //var doi_node = doc.DocumentNode.SelectSingleNode("//*[@id=\"b_content\"]/ol[1]/li[3]/ul/li[10]/div/span[2]/div");
-            //if(doi_node !=null)
-            //{
-            //    paper.DOI = doi_node.InnerText.Trim();
-            //}
+        private bool IsChinese(string s)
+        {
+            Regex rx = new Regex("^[\u4e00-\u9fa5]$");
+            if (rx.IsMatch(s))
+                return true;
+            else
+                return false;
         }
     }
 }
