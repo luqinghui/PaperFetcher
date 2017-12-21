@@ -67,8 +67,8 @@ namespace PaperFetcher
             var nodes = doc.DocumentNode.SelectNodes("//*[@id=\"gs_ccl_results\"]/div");
             foreach (var node in nodes)
             {
-                string title = node.SelectSingleNode("./div/h3/a").InnerText;
-                string cite = node.SelectSingleNode("./div/div[3]/a").InnerText;
+                string title = node.SelectSingleNode(".//*[contains(@class, 'gs_rt')]").InnerText;
+                string cite = node.SelectSingleNode(".//*[contains(@class, 'gs_fl')]/a").InnerText;
 
                 papers.Add(new Paper { Title = title, GoogleCite = Convert.ToInt32(cite.Split('：')[1].Trim()) });
             }
@@ -94,8 +94,13 @@ namespace PaperFetcher
             {
                 //中文
                 //万方获取DOI
+                
 
                 //baidu获取详细信息
+
+
+
+
 
             }
             else
@@ -110,6 +115,23 @@ namespace PaperFetcher
             
 
             //填充参考文献
+
+        }
+
+        private void GetDetailByBaidu(string title)
+        {
+            string bd_url = $"http://xueshu.baidu.com/s?wd={title}";
+
+            var req = WebRequest.Create(title) as HttpWebRequest;
+
+            var res = req.GetResponse();
+            Stream s = res.GetResponseStream();
+
+            HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
+
+            doc.Load(s, Encoding.UTF8);
+
+            string t = doc.DocumentNode.SelectSingleNode("//*[@id=\"1\"]/div[1]/h3").InnerText;
 
         }
 
@@ -235,7 +257,7 @@ namespace PaperFetcher
 
         private bool IsChinese(string s)
         {
-            Regex rx = new Regex("^[\u4e00-\u9fa5]$");
+            Regex rx = new Regex("[\u4e00-\u9fa5]");
             if (rx.IsMatch(s))
                 return true;
             else
